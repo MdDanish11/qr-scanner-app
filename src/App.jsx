@@ -39,12 +39,15 @@ function App() {
         { facingMode: "environment" },
         config,
         async (decodedText) => {
-          if (alreadyScannedRef.current) return;
+          if (alreadyScannedRef.current) return; 
           alreadyScannedRef.current = true;
 
-          const cleanedText = decodedText.trim();
+          const rawText = decodedText;
+          const cleanedText = decodedText.trim().replace(/\s+/g, "");
 
-          console.log("Scanned:", cleanedText);
+          console.log("Raw Scanned Text:", rawText);
+          console.log("Cleaned Scanned Text:", cleanedText);
+
           setScanning(false);
           html5QrCode.stop();
 
@@ -56,13 +59,13 @@ function App() {
           const apiMessage = await verifyScannedText(cleanedText);
           setScannedText(apiMessage);
         },
+
         (err) => {
           console.log("Scan error:", err);
         }
       )
       .then(() => {
         setScanning(true);
-        // ✅ Correct way to get the camera track
         const videoElement = document.querySelector("video");
         if (videoElement && videoElement.srcObject) {
           const track = videoElement.srcObject.getVideoTracks?.()[0];
