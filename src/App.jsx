@@ -23,7 +23,7 @@ function App() {
   const [scanning, setScanning] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
   const [cameraTrack, setCameraTrack] = useState(null);
-  const alreadyScannedRef = useRef(false); // ✅ to avoid multiple calls
+  const alreadyScannedRef = useRef(false);
 
   const startScanner = () => {
     setScannedText("");
@@ -39,7 +39,7 @@ function App() {
         { facingMode: "environment" },
         config,
         async (decodedText) => {
-          if (alreadyScannedRef.current) return; // ✅ only first scan allowed
+          if (alreadyScannedRef.current) return;
           alreadyScannedRef.current = true;
 
           const cleanedText = decodedText.trim();
@@ -57,17 +57,16 @@ function App() {
           setScannedText(apiMessage);
         },
         (err) => {
-          console.log("Scan error:", err); // Ignore individual scan failures
+          console.log("Scan error:", err);
         }
       )
       .then(() => {
         setScanning(true);
-        try {
-          const stream = html5QrCode.getRunningTrackSettings()?.stream;
-          const track = stream?.getVideoTracks?.()[0];
+        // ✅ Correct way to get the camera track
+        const videoElement = document.querySelector("video");
+        if (videoElement && videoElement.srcObject) {
+          const track = videoElement.srcObject.getVideoTracks?.()[0];
           if (track) setCameraTrack(track);
-        } catch (e) {
-          console.warn("Could not access camera track");
         }
       });
   };
@@ -83,8 +82,14 @@ function App() {
   };
 
   const toggleFlash = async () => {
-    if (!cameraTrack) return;
+    if (!cameraTrack) {
+      alert("No camera access available.");
+      return;
+    }
+
     const capabilities = cameraTrack.getCapabilities();
+    console.log("Camera Capabilities:", capabilities);
+
     if (!capabilities.torch) {
       alert("Flashlight not supported on this device.");
       return;
@@ -97,6 +102,7 @@ function App() {
       setFlashOn((prev) => !prev);
     } catch (err) {
       console.error("Flashlight error:", err);
+      alert("Failed to toggle flashlight.");
     }
   };
 
