@@ -19,6 +19,7 @@ const verifyScannedText = async (text) => {
 
 function App() {
   const scannerRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [scannedText, setScannedText] = useState("");
   const [scanning, setScanning] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
@@ -39,7 +40,7 @@ function App() {
         { facingMode: "environment" },
         config,
         async (decodedText) => {
-          if (alreadyScannedRef.current) return; 
+          if (alreadyScannedRef.current) return;
           alreadyScannedRef.current = true;
 
           const rawText = decodedText;
@@ -59,17 +60,18 @@ function App() {
           const apiMessage = await verifyScannedText(cleanedText);
           setScannedText(apiMessage);
         },
-
         (err) => {
-          console.log("Scan error:", err);
+          // Don't log unnecessary scan errors
         }
       )
       .then(() => {
         setScanning(true);
-        const videoElement = document.querySelector("video");
-        if (videoElement && videoElement.srcObject) {
-          const track = videoElement.srcObject.getVideoTracks?.()[0];
+        try {
+          const stream = html5QrCode.getRunningTrackSettings()?.stream;
+          const track = stream?.getVideoTracks?.()[0];
           if (track) setCameraTrack(track);
+        } catch (e) {
+          console.warn("Could not access camera track");
         }
       });
   };
@@ -85,14 +87,8 @@ function App() {
   };
 
   const toggleFlash = async () => {
-    if (!cameraTrack) {
-      alert("No camera access available.");
-      return;
-    }
-
+    if (!cameraTrack) return;
     const capabilities = cameraTrack.getCapabilities();
-    console.log("Camera Capabilities:", capabilities);
-
     if (!capabilities.torch) {
       alert("Flashlight not supported on this device.");
       return;
@@ -105,7 +101,29 @@ function App() {
       setFlashOn((prev) => !prev);
     } catch (err) {
       console.error("Flashlight error:", err);
-      alert("Failed to toggle flashlight.");
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const html5QrCode = new Html5Qrcode("reader");
+
+    try {
+      const result = await html5QrCode.scanFile(file, true);
+      console.log("Image QR Result:", result);
+
+      const cleanedText = result.trim().replace(/\s+/g, "");
+      const apiMessage = await verifyScannedText(cleanedText);
+      setScannedText(apiMessage);
+    } catch (err) {
+      console.error("Image Scan Error:", err);
+      alert("Could not scan the selected image.");
     }
   };
 
@@ -117,7 +135,17 @@ function App() {
       </div>
       <div className="button-group">
         {!scanning ? (
-          <button onClick={startScanner}>Scan QR</button>
+          <>
+            <button onClick={startScanner}>Scan QR</button>
+            <button onClick={handleUploadClick}>Upload QR Image</button>
+            <input
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              ref={fileInputRef}
+              onChange={handleFileChange}
+            />
+          </>
         ) : (
           <>
             <button onClick={stopScanner}>Close Scan</button>
