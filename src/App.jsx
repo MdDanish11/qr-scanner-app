@@ -88,19 +88,21 @@ function App() {
   };
 
   const toggleFlash = async () => {
-    if (!cameraTrack) {
-      alert("Flashlight not supported on this device.");
-      return;
-    }
-  
-    const capabilities = cameraTrack.getCapabilities();
-    if (!capabilities.torch) {
-      alert("Flashlight not supported on this device.");
-      return;
-    }
-  
     try {
-      await cameraTrack.applyConstraints({
+      const track = cameraTrack;
+  
+      if (!track) {
+        alert("Camera not initialized yet.");
+        return;
+      }
+  
+      const capabilities = track.getCapabilities();
+      if (!capabilities || !capabilities.torch) {
+        alert("Flashlight not supported on this device.");
+        return;
+      }
+  
+      await track.applyConstraints({
         advanced: [{ torch: !flashOn }],
       });
       setFlashOn((prev) => !prev);
@@ -109,6 +111,8 @@ function App() {
       alert("Could not toggle flashlight.");
     }
   };
+  
+  
   
   const handleUploadClick = () => {
     fileInputRef.current.click();
