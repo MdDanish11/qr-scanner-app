@@ -67,12 +67,13 @@ function App() {
       .then(() => {
         setScanning(true);
         try {
-          const stream = html5QrCode.getRunningTrackSettings()?.stream;
-          const track = stream?.getVideoTracks?.()[0];
-          if (track) setCameraTrack(track);
-        } catch (e) {
-          console.warn("Could not access camera track");
+        const tracks = html5QrCode.getMediaStream()?.getVideoTracks?.();
+        if (tracks && tracks.length > 0) {
+          setCameraTrack(tracks[0]);
         }
+      } catch (e) {
+        
+      }
       });
   };
 
@@ -87,13 +88,17 @@ function App() {
   };
 
   const toggleFlash = async () => {
-    if (!cameraTrack) return;
+    if (!cameraTrack) {
+      alert("Flashlight not supported on this device.");
+      return;
+    }
+  
     const capabilities = cameraTrack.getCapabilities();
     if (!capabilities.torch) {
       alert("Flashlight not supported on this device.");
       return;
     }
-
+  
     try {
       await cameraTrack.applyConstraints({
         advanced: [{ torch: !flashOn }],
@@ -101,9 +106,10 @@ function App() {
       setFlashOn((prev) => !prev);
     } catch (err) {
       console.error("Flashlight error:", err);
+      alert("Could not toggle flashlight.");
     }
   };
-
+  
   const handleUploadClick = () => {
     fileInputRef.current.click();
   };
