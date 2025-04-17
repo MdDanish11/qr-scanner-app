@@ -67,13 +67,12 @@ function App() {
       .then(() => {
         setScanning(true);
         try {
-        const tracks = html5QrCode.getMediaStream()?.getVideoTracks?.();
-        if (tracks && tracks.length > 0) {
-          setCameraTrack(tracks[0]);
-        }
-      } catch (e) {
-        
-      }
+          const videoElement = document.querySelector("video");
+          if (videoElement && videoElement.srcObject) {
+            const track = videoElement.srcObject.getVideoTracks?.()[0];
+            if (track) setCameraTrack(track);
+          }
+        } catch (e) {}
       });
   };
 
@@ -88,32 +87,30 @@ function App() {
   };
 
   const toggleFlash = async () => {
+    if (!cameraTrack) {
+      alert("No camera access available.");
+      return;
+    }
+
+    const capabilities = cameraTrack.getCapabilities();
+    console.log("Camera Capabilities:", capabilities);
+
+    if (!capabilities.torch) {
+      alert("Flashlight not supported on this device.");
+      return;
+    }
+
     try {
-      const track = cameraTrack;
-  
-      if (!track) {
-        alert("Camera not initialized yet.");
-        return;
-      }
-  
-      const capabilities = track.getCapabilities();
-      if (!capabilities || !capabilities.torch) {
-        alert("Flashlight not supported on this device.");
-        return;
-      }
-  
-      await track.applyConstraints({
+      await cameraTrack.applyConstraints({
         advanced: [{ torch: !flashOn }],
       });
       setFlashOn((prev) => !prev);
     } catch (err) {
       console.error("Flashlight error:", err);
-      alert("Could not toggle flashlight.");
+      alert("Failed to toggle flashlight.");
     }
   };
-  
-  
-  
+
   const handleUploadClick = () => {
     fileInputRef.current.click();
   };
